@@ -58,6 +58,13 @@ export function Landing() {
                 and context that shaped where your journey went next.
               </p>
               <CTA />
+              <a
+                className="text-link"
+                href="/demo"
+                style={{ display: "flex", width: "fit-content", marginTop: 16 }}
+              >
+                Try UNUKAR <Arrow />
+              </a>
               <p className="small-note">Less documenting. More living.</p>
             </div>
           </div>
