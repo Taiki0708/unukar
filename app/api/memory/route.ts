@@ -19,6 +19,7 @@ export async function POST(request: Request) {
   if (item.count >= 5 || attempts.size > 10000) return reply({ error: "Please try again in an hour, or continue without AI." }, 429);
   item.count++; attempts.set(ip, item);
   let transcript = "";
+  let stage = "audio_input";
   try {
     const form = await request.formData();
     const audio = form.get("audio");
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
     if (!(audio instanceof File) || !audio.size || audio.size > MAX_BYTES || !/^audio\/(webm|mp4|ogg|mpeg|wav|x-wav)(;|$)/.test(audio.type) || typeof today !== "string" || !validDate(today)) return reply({ error: "Please send a short audio recording and a valid date." }, 400);
     const signal = AbortSignal.timeout(50000);
     const mimeType = audio.type.split(";")[0].replace("audio/mp4", "audio/m4a").replace("audio/x-wav", "audio/wav");
+    stage = "provider_request";
     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
       method: "POST", signal,
       headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
@@ -45,19 +47,29 @@ export async function POST(request: Request) {
       }),
     });
     if (response.status === 429) return reply({ error: "The free demo has reached its AI limit. Please try later, or continue without AI. Your recording is still here." }, 429);
-    if (!response.ok) throw new Error("Analysis unavailable");
+    if (!response.ok) {
+      const failure = await response.json().catch(() => ({}));
+      const message = String(failure.error?.message || "").toLowerCase();
+      const category = /api.key|credential|permission|unauthenticated/.test(message) ? "credentials" : /location|region|country/.test(message) ? "region" : /model|not found/.test(message) ? "model" : /audio|mime|decode|format/.test(message) ? "audio_format" : "provider_request";
+      console.error("memory_analysis_failed", { stage: category, status: response.status });
+      return reply({ error: `Voice analysis is temporarily unavailable (${category}). Your recording is still here. Please continue without AI for now.`, code: category }, 502);
+    }
+    stage = "provider_response";
     const result = await response.json();
     const candidate = result.candidates?.[0];
     if (candidate?.finishReason !== "STOP") throw new Error("Incomplete analysis");
     const output = candidate.content?.parts?.filter((part: { thought?: boolean; text?: string }) => !part.thought && typeof part.text === "string").map((part: { text: string }) => part.text).join("");
+    stage = "response_json";
     const parsed = JSON.parse(output);
     if (typeof parsed.transcript !== "string" || !parsed.transcript.trim() || parsed.transcript.length > 12000) return reply({ error: "We couldn’t hear clear speech. Please try again, or continue without AI." }, 422);
     transcript = parsed.transcript;
+    stage = "details_validation";
     const details = validateDetails(parsed.details);
     // Preserve the traveler's words even if the model paraphrases an excerpt.
     for (const key of ["context", "connection"] as const) if (details[key] && !transcript.includes(details[key])) details[key] = "";
     return reply({ transcript, details });
   } catch {
-    return reply({ error: transcript ? "Your words are transcribed, but we couldn’t organize them. You can continue and add details yourself." : "We couldn’t analyze this recording. Please try again, or continue without AI.", ...(transcript ? { transcript } : {}) }, 502);
+    console.error("memory_analysis_failed", { stage });
+    return reply({ error: transcript ? "Your words are transcribed, but we couldn’t organize them. You can continue and add details yourself." : "We couldn’t analyze this recording. Please try again, or continue without AI.", code: stage, ...(transcript ? { transcript } : {}) }, 502);
   }
 }
