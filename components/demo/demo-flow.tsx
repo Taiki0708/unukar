@@ -221,6 +221,8 @@ export function DemoFlow() {
                     type="date"
                     value={memory.date}
                     onChange={(e) => update("date", e.target.value)}
+                    onInput={(e) => update("date", e.currentTarget.value)}
+                    onBlur={(e) => update("date", e.currentTarget.value)}
                     aria-describedby="memory-date-help"
                   />
                   <p id="memory-date-help" className="demo-hint">
