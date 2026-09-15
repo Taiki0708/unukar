@@ -143,7 +143,7 @@ export function DemoFlow() {
         <div className="demo-intro">
           <p className="eyebrow">A SMALL MOMENT. A BIGGER STORY.</p>
           <p className="demo-hint">
-            A one-minute taste of UNUKAR. Photos stay in this browser. Voice analysis sends audio to OpenAI. UNUKAR does not permanently save this demo.
+            A one-minute taste of UNUKAR. Photos stay in this browser. Voice analysis sends audio to Google Gemini. UNUKAR does not permanently save this demo.
           </p>
         </div>
         <ol className="demo-progress" aria-label="Your progress">
@@ -230,7 +230,7 @@ export function DemoFlow() {
                   }}
                 />
               </div>
-              <p className="demo-hint">Organize my memory sends your recording to OpenAI for transcription and suggested details. Check the result before keeping it.</p>
+              <p className="demo-hint">Organize my memory sends your recording to Google Gemini for transcription and suggested details. On the free tier, Google may use it to improve its products. Please use a test memory without private information. Check the result before keeping it.</p>
               <p role="status" aria-live="polite" className="demo-error">{busy ? "Finding the people, places and connections in your words…" : analysisError}</p>
               <div className="demo-footer-actions">
                 {memory.audio && !busy && <button className="demo-text" disabled={voiceBusy} onClick={next}>Continue without AI</button>}
