@@ -464,3 +464,11 @@
     gap: 12px;
   }
 }
+
+.demo-memory-date {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}

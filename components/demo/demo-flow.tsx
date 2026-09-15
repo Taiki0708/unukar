@@ -11,6 +11,7 @@ const STEPS = [
   "See the connection",
 ];
 const INITIAL: Memory = {
+  date: "",
   photo: "/images/hero.jpg",
   audio: null,
   sample: false,
@@ -21,6 +22,10 @@ const INITIAL: Memory = {
   context: "",
   connection: "",
 };
+function localToday() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
 export function DemoFlow() {
   const [step, setStep] = useState(0);
   const [memory, setMemory] = useState<Memory>(INITIAL);
@@ -30,6 +35,9 @@ export function DemoFlow() {
   const heading = useRef<HTMLHeadingElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRequest = useRef(0);
+  useEffect(() => {
+    setMemory((m) => ({ ...m, date: m.date || localToday() }));
+  }, []);
   useEffect(() => {
     heading.current?.focus();
   }, [step]);
@@ -86,7 +94,7 @@ export function DemoFlow() {
   }
   function reset() {
     choose("/images/hero.jpg");
-    setMemory({ ...INITIAL });
+    setMemory({ ...INITIAL, date: localToday() });
     setYes(false);
     setStep(0);
   }
@@ -207,6 +215,19 @@ export function DemoFlow() {
                 A name, a place, a song. Keep only what matters to you.
               </p>
               <div className="demo-fields">
+                <label>
+                  Memory date <span>automatically set to today</span>
+                  <input
+                    type="date"
+                    value={memory.date}
+                    onChange={(e) => update("date", e.target.value)}
+                    aria-describedby="memory-date-help"
+                  />
+                  <p id="memory-date-help" className="demo-hint">
+                    Remembering another day? Change it here. This is not read
+                    from your photo.
+                  </p>
+                </label>
                 <label>
                   Person <span>optional</span>
                   <input

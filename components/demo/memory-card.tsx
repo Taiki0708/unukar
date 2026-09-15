@@ -10,6 +10,7 @@ export type Memory = {
   artist: string;
   context: string;
   connection: string;
+  date: string;
 };
 export function MemoryCard({ memory }: { memory: Memory }) {
   const [url, setUrl] = useState("");
@@ -24,6 +25,15 @@ export function MemoryCard({ memory }: { memory: Memory }) {
       <img src={memory.photo} alt="The photograph you chose for this memory" />
       <div className="demo-memory-copy">
         <p className="demo-mini">A MOMENT WORTH KEEPING</p>
+        {memory.date && (
+          <time className="demo-memory-date" dateTime={memory.date}>
+            {new Intl.DateTimeFormat("en-GB", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }).format(new Date(`${memory.date}T12:00:00`))}
+          </time>
+        )}
         <h2>{memory.place || "Somewhere along the way."}</h2>
         {memory.sample ? (
           <>
