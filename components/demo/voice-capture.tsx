@@ -6,7 +6,11 @@ export function VoiceCapture({
   audio,
   sample,
   onChange,
+  disabled = false,
+  onBusyChange,
 }: {
+  disabled?: boolean;
+  onBusyChange: (busy: boolean) => void;
   audio: Blob | null;
   sample: boolean;
   onChange: (audio: Blob | null, sample: boolean) => void;
@@ -19,6 +23,7 @@ export function VoiceCapture({
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
   const [url, setUrl] = useState("");
+  useEffect(() => { onBusyChange(recording || pending); }, [recording, pending, onBusyChange]);
   useEffect(() => {
     if (!audio) {
       setUrl("");
@@ -97,7 +102,7 @@ export function VoiceCapture({
         <button
           className="demo-outline"
           type="button"
-          disabled={pending}
+          disabled={pending || disabled}
           onClick={recording ? stop : start}
         >
           {pending
@@ -112,7 +117,7 @@ export function VoiceCapture({
         <button
           className="demo-text"
           type="button"
-          disabled={recording || pending}
+          disabled={recording || pending || disabled}
           onClick={() => onChange(null, true)}
         >
           Use an example

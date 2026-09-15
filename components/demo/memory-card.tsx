@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { SAMPLE_TRANSCRIPT } from "./voice-capture";
 export type Memory = {
+  transcript: string;
+  analyzed: boolean;
   photo: string;
   audio: Blob | null;
   sample: boolean;
@@ -45,12 +47,13 @@ export function MemoryCard({ memory }: { memory: Memory }) {
             <p className="demo-mini">YOUR ORIGINAL VOICE NOTE</p>
             <audio src={url} controls aria-label="Your saved voice note" />
             <p className="demo-hint">
-              Kept as you said it. No transcription or rewriting.
+              Your original recording, kept alongside your words.
             </p>
           </>
         ) : (
           <p className="demo-hint">A quiet moment. No voice note added.</p>
         )}
+        {memory.transcript && !memory.sample && <><p className="demo-mini">YOUR WORDS · TRANSCRIPT</p><blockquote>“{memory.transcript}”</blockquote></>}
         <dl>
           {memory.person && (
             <>

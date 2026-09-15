@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { VoiceCapture } from "./voice-capture";
+import { validateDetails } from "../../lib/memory-analysis";
+import { VoiceCapture, SAMPLE_TRANSCRIPT } from "./voice-capture";
 import { MemoryCard, type Memory } from "./memory-card";
 const STEPS = [
   "Capture",
@@ -11,6 +12,8 @@ const STEPS = [
   "See the connection",
 ];
 const INITIAL: Memory = {
+  transcript: "",
+  analyzed: false,
   date: "",
   photo: "/images/hero.jpg",
   audio: null,
@@ -31,6 +34,10 @@ export function DemoFlow() {
   const [memory, setMemory] = useState<Memory>(INITIAL);
   const [yes, setYes] = useState(false);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [analysisError, setAnalysisError] = useState("");
+  const analysisLock = useRef(false);
   const upload = useRef("");
   const heading = useRef<HTMLHeadingElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -89,6 +96,30 @@ export function DemoFlow() {
       setError("That photo couldn’t be opened. Please choose another.");
     }
   }
+  async function analyze() {
+    if (analysisLock.current) return;
+    if (memory.sample) {
+      setMemory(m => ({ ...m, transcript: SAMPLE_TRANSCRIPT, person: "Emma", place: "", context: "We ended up talking for hours.", connection: "She told me about Laos, and now I think I’m going to change my route.", analyzed: false }));
+      setYes(true); next(); return;
+    }
+    if (!memory.audio || memory.analyzed) { next(); return; }
+    if (memory.audio.size > 3 * 1024 * 1024) { setAnalysisError("Please record a shorter note (up to 3 MB)."); return; }
+    analysisLock.current = true; setBusy(true); setAnalysisError("");
+    try {
+      const form = new FormData();
+      form.set("audio", memory.audio, "memory");
+      form.set("today", localToday());
+      const response = await fetch("/api/memory", { method: "POST", body: form, signal: AbortSignal.timeout(55000) });
+      const result = await response.json();
+      if (typeof result.transcript === "string") setMemory(m => ({ ...m, transcript: result.transcript }));
+      if (!response.ok) throw new Error(result.error || "Please try again.");
+      const details = validateDetails(result.details);
+      setMemory(m => ({ ...m, ...details, date: details.date || m.date, transcript: result.transcript, analyzed: true }));
+      setYes(Boolean(details.connection)); next();
+    } catch (error) {
+      setAnalysisError(error instanceof Error && error.name !== "TimeoutError" ? error.message : "This is taking too long. Your recording is still here. Try again or continue without AI.");
+    } finally { analysisLock.current = false; setBusy(false); }
+  }
   function next() {
     setStep((s) => Math.min(s + 1, 4));
   }
@@ -112,8 +143,7 @@ export function DemoFlow() {
         <div className="demo-intro">
           <p className="eyebrow">A SMALL MOMENT. A BIGGER STORY.</p>
           <p className="demo-hint">
-            A one-minute taste of UNUKAR. Nothing is uploaded or permanently
-            saved.
+            A one-minute taste of UNUKAR. Photos stay in this browser. Voice analysis sends audio to OpenAI. UNUKAR does not permanently save this demo.
           </p>
         </div>
         <ol className="demo-progress" aria-label="Your progress">
@@ -136,7 +166,7 @@ export function DemoFlow() {
             {
               [
                 "Keep this moment.",
-                "Anything else you want to keep?",
+                memory.analyzed ? "Your words. A little more connected." : "Anything else you want to keep?",
                 "Did this moment change where you went next?",
                 "A little piece of your journey.",
                 "Look where one connection can lead.",
@@ -192,17 +222,23 @@ export function DemoFlow() {
                 <VoiceCapture
                   audio={memory.audio}
                   sample={memory.sample}
-                  onChange={(audio, sample) =>
-                    setMemory((m) => ({ ...m, audio, sample }))
-                  }
+                  disabled={busy}
+                  onBusyChange={setVoiceBusy}
+                  onChange={(audio, sample) => {
+                    setMemory((m) => ({ ...m, audio, sample, transcript: "", analyzed: false, person: "", place: "", song: "", artist: "", context: "", connection: "" }));
+                    setYes(false); setAnalysisError("");
+                  }}
                 />
               </div>
+              <p className="demo-hint">Organize my memory sends your recording to OpenAI for transcription and suggested details. Check the result before keeping it.</p>
+              <p role="status" aria-live="polite" className="demo-error">{busy ? "Finding the people, places and connections in your words…" : analysisError}</p>
               <div className="demo-footer-actions">
-                <button className="button" onClick={next}>
-                  KEEP THIS MOMENT <span aria-hidden="true">→</span>
+                {memory.audio && !busy && <button className="demo-text" disabled={voiceBusy} onClick={next}>Continue without AI</button>}
+                <button className="button" disabled={busy || voiceBusy} onClick={() => void analyze()}>
+                  {busy ? "LISTENING & ORGANIZING…" : memory.audio ? "ORGANIZE MY MEMORY" : memory.sample ? "EXPLORE THE EXAMPLE" : "KEEP THIS MOMENT"} <span aria-hidden="true">→</span>
                 </button>
                 {!memory.audio && !memory.sample && (
-                  <button className="demo-text" onClick={next}>
+                  <button className="demo-text" disabled={voiceBusy || busy} onClick={next}>
                     Skip voice for now
                   </button>
                 )}
@@ -212,11 +248,12 @@ export function DemoFlow() {
           {step === 1 && (
             <>
               <p className="demo-lede">
-                A name, a place, a song. Keep only what matters to you.
+                {memory.analyzed ? "Suggested from your voice. Check names and dates, change anything, and leave the rest blank." : memory.sample ? "Prepared example details — this example does not call AI." : "A name, a place, a song. Keep only what matters to you."}
               </p>
+              {memory.transcript && <div className="demo-quote"><p className="demo-mini">{memory.sample ? "SAMPLE TRANSCRIPT" : "YOUR WORDS · TRANSCRIPT"}</p><p>“{memory.transcript}”</p></div>}
               <div className="demo-fields">
                 <label>
-                  Memory date <span>automatically set to today</span>
+                  Memory date <span>{memory.analyzed ? "check this date" : "defaults to today"}</span>
                   <input
                     type="date"
                     value={memory.date}
@@ -371,8 +408,7 @@ export function DemoFlow() {
               </p>
               <MemoryCard memory={memory} />
               <p className="demo-hint">
-                AI organizes. You remember. This demo groups what you entered;
-                it doesn’t use AI or rewrite your story.
+                AI organizes. You remember. Your original voice stays with the memory. Suggested details are yours to correct.
               </p>
               <div className="demo-footer-actions">
                 <button className="button" onClick={next}>
@@ -391,7 +427,7 @@ export function DemoFlow() {
               </p>
               {memory.connection && (
                 <aside className="demo-your-connection">
-                  <p className="demo-mini">YOUR CONNECTION · YOUR WORDS</p>
+                  <p className="demo-mini">YOUR CONNECTION</p>
                   <p>“{memory.connection}”</p>
                 </aside>
               )}
