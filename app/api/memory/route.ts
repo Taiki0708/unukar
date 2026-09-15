@@ -60,7 +60,13 @@ export async function POST(request: Request) {
     if (candidate?.finishReason !== "STOP") throw new Error("Incomplete analysis");
     const output = candidate.content?.parts?.filter((part: { thought?: boolean; text?: string }) => !part.thought && typeof part.text === "string").map((part: { text: string }) => part.text).join("");
     stage = "response_json";
-    const parsed = JSON.parse(output);
+    const jsonText = typeof output === "string" ? output.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "") : "";
+    let parsed;
+    try { parsed = JSON.parse(jsonText); }
+    catch {
+      console.error("memory_analysis_invalid_json", { length: jsonText.length, parts: candidate.content?.parts?.length, startsWithObject: jsonText.startsWith("{"), endsWithObject: jsonText.endsWith("}") });
+      throw new Error("Invalid response JSON");
+    }
     if (typeof parsed.transcript !== "string" || !parsed.transcript.trim() || parsed.transcript.length > 12000) return reply({ error: "We couldn’t hear clear speech. Please try again, or continue without AI." }, 422);
     transcript = parsed.transcript;
     stage = "details_validation";
