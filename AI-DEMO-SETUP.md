@@ -4,7 +4,7 @@
 2. Add `GEMINI_API_KEY` in Vercel → unukar → Settings → Environment Variables for Production, then redeploy. Never put the key in chat, GitHub or a NEXT_PUBLIC variable.
 3. Test a short, non-sensitive recording. Free-tier inputs may be used by Google to improve its products. The demo displays this disclosure before submission.
 
-The server sends only audio and the browser's recording date to Gemini 2.5 Flash via generateContent. One request returns the original-language transcript and optional details. The original audio remains in browser memory. No photo is sent and no application database or permanent file storage is used. Google's own retention policies still apply.
+The server sends only audio and the browser's recording date to Gemini 3.1 Flash-Lite via generateContent. One request returns the original-language transcript and optional details. The original audio remains in browser memory. No photo is sent and no application database or permanent file storage is used. Google's own retention policies still apply.
 
 Quota errors return a clear message; there is no automatic retry, provider fallback or paid-tier upgrade. A paid Google project may incur charges: free usage depends on the project's billing tier, not the API key name.
 
