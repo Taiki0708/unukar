@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { validateDetails } from "../../lib/memory-analysis";
 import { VoiceCapture, SAMPLE_TRANSCRIPT } from "./voice-capture";
+import { JourneyConnection, ConnectionReview } from "./journey-connection";
 import { MemoryCard, type Memory } from "./memory-card";
 const STEPS = [
   "Capture",
@@ -12,6 +13,10 @@ const STEPS = [
   "See the connection",
 ];
 const INITIAL: Memory = {
+  destination: "",
+  connector: "",
+  travelStatus: "unknown",
+  clarificationSkipped: false,
   transcript: "",
   analyzed: false,
   date: "",
@@ -99,7 +104,7 @@ export function DemoFlow() {
   async function analyze() {
     if (analysisLock.current) return;
     if (memory.sample) {
-      setMemory(m => ({ ...m, transcript: SAMPLE_TRANSCRIPT, person: "Emma", place: "", context: "We ended up talking for hours.", connection: "She told me about Laos, and now I think I’m going to change my route.", analyzed: false }));
+      setMemory(m => ({ ...m, transcript: SAMPLE_TRANSCRIPT, person: "Emma", place: "", context: "We ended up talking for hours.", connection: "She told me about Laos, and now I think I’m going to change my route.", destination: "Laos", connector: "Emma", travelStatus: "planned", clarificationSkipped: false, analyzed: false }));
       setYes(true); next(); return;
     }
     if (!memory.audio || memory.analyzed) { next(); return; }
@@ -114,7 +119,7 @@ export function DemoFlow() {
       if (typeof result.transcript === "string") setMemory(m => ({ ...m, transcript: result.transcript }));
       if (!response.ok) throw new Error(result.error || "Please try again.");
       const details = validateDetails(result.details);
-      setMemory(m => ({ ...m, ...details, date: details.date || m.date, transcript: result.transcript, analyzed: true }));
+      setMemory(m => ({ ...m, ...details, date: details.date || m.date, transcript: result.transcript, analyzed: true, clarificationSkipped: false }));
       setYes(Boolean(details.connection)); next();
     } catch (error) {
       setAnalysisError(error instanceof Error && error.name !== "TimeoutError" ? error.message : "This is taking too long. Your recording is still here. Try again or continue without AI.");
@@ -225,7 +230,7 @@ export function DemoFlow() {
                   disabled={busy}
                   onBusyChange={setVoiceBusy}
                   onChange={(audio, sample) => {
-                    setMemory((m) => ({ ...m, audio, sample, transcript: "", analyzed: false, person: "", place: "", song: "", artist: "", context: "", connection: "" }));
+                    setMemory((m) => ({ ...m, audio, sample, transcript: "", analyzed: false, person: "", place: "", song: "", artist: "", context: "", connection: "", destination: "", connector: "", travelStatus: "unknown", clarificationSkipped: false }));
                     setYes(false); setAnalysisError("");
                   }}
                 />
@@ -363,7 +368,7 @@ export function DemoFlow() {
                 <button
                   className="demo-text"
                   onClick={() => {
-                    update("connection", "");
+                    setMemory(m => ({ ...m, connection: "", destination: "", connector: "", travelStatus: "unknown" }));
                     setYes(false);
                     next();
                   }}
@@ -387,6 +392,7 @@ export function DemoFlow() {
                   </span>
                 </label>
               )}
+              {yes && <ConnectionReview memory={memory} onChange={patch => setMemory(m => ({ ...m, ...patch }))} />}
               {yes && (
                 <div className="demo-footer-actions">
                   <button className="button" onClick={next}>
@@ -432,28 +438,7 @@ export function DemoFlow() {
                 </aside>
               )}
               <div className="demo-journey-grid">
-                <section className="demo-route">
-                  <p className="demo-mini">AN EXAMPLE JOURNEY</p>
-                  <ol>
-                    <li>
-                      <h2>Bangkok</h2>
-                      <p>↓ met Emma</p>
-                      <span>She recommended Laos.</span>
-                    </li>
-                    <li>
-                      <h2>Laos</h2>
-                      <p>↓ met Luca</p>
-                      <span>He recommended Georgia.</span>
-                    </li>
-                    <li>
-                      <h2>Georgia</h2>
-                      <span>A place you might never have found alone.</span>
-                    </li>
-                  </ol>
-                  <p className="demo-hint">
-                    An illustration, not a route inferred from your memory.
-                  </p>
-                </section>
+                <JourneyConnection memory={memory} />
                 <section className="demo-book">
                   <p className="demo-mini">
                     THE JOURNEY BOOK · CONCEPT PREVIEW

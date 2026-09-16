@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { statusLabel, type JourneyMemory } from "./journey-connection";
 import { SAMPLE_TRANSCRIPT } from "./voice-capture";
-export type Memory = {
+export type Memory = JourneyMemory & {
   transcript: string;
   analyzed: boolean;
   photo: string;
@@ -77,10 +78,11 @@ export function MemoryCard({ memory }: { memory: Memory }) {
           )}
           {memory.connection && (
             <>
-              <dt>Led me to</dt>
+              <dt>The connection</dt>
               <dd>{memory.connection}</dd>
             </>
           )}
+          {memory.destination && <><dt>Next destination</dt><dd>{memory.destination} · {statusLabel(memory.travelStatus, /[ぁ-んァ-ヶ一-龯]/.test(memory.transcript))}</dd></>}
         </dl>
       </div>
     </article>
