@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { validateDetails } from "../../lib/memory-analysis";
 import { VoiceCapture, SAMPLE_TRANSCRIPT } from "./voice-capture";
+import { TranscriptEditor } from "./transcript-editor";
 import { JourneyConnection, ConnectionReview } from "./journey-connection";
 import { MemoryCard, type Memory } from "./memory-card";
 const STEPS = [
@@ -17,6 +18,7 @@ const INITIAL: Memory = {
   connector: "",
   travelStatus: "unknown",
   clarificationSkipped: false,
+  originalTranscript: "",
   transcript: "",
   analyzed: false,
   date: "",
@@ -104,7 +106,7 @@ export function DemoFlow() {
   async function analyze() {
     if (analysisLock.current) return;
     if (memory.sample) {
-      setMemory(m => ({ ...m, transcript: SAMPLE_TRANSCRIPT, person: "Emma", place: "", context: "We ended up talking for hours.", connection: "She told me about Laos, and now I think I’m going to change my route.", destination: "Laos", connector: "Emma", travelStatus: "planned", clarificationSkipped: false, analyzed: false }));
+      setMemory(m => ({ ...m, originalTranscript: SAMPLE_TRANSCRIPT, transcript: SAMPLE_TRANSCRIPT, person: "Emma", place: "", context: "We ended up talking for hours.", connection: "She told me about Laos, and now I think I’m going to change my route.", destination: "Laos", connector: "Emma", travelStatus: "planned", clarificationSkipped: false, analyzed: false }));
       setYes(true); next(); return;
     }
     if (!memory.audio || memory.analyzed) { next(); return; }
@@ -116,10 +118,10 @@ export function DemoFlow() {
       form.set("today", localToday());
       const response = await fetch("/api/memory", { method: "POST", body: form, signal: AbortSignal.timeout(55000) });
       const result = await response.json();
-      if (typeof result.transcript === "string") setMemory(m => ({ ...m, transcript: result.transcript }));
+      if (typeof result.transcript === "string") setMemory(m => ({ ...m, originalTranscript: result.transcript, transcript: result.transcript }));
       if (!response.ok) throw new Error(result.error || "Please try again.");
       const details = validateDetails(result.details);
-      setMemory(m => ({ ...m, ...details, date: details.date || m.date, transcript: result.transcript, analyzed: true, clarificationSkipped: false }));
+      setMemory(m => ({ ...m, ...details, date: details.date || m.date, originalTranscript: result.transcript, transcript: result.transcript, analyzed: true, clarificationSkipped: false }));
       setYes(Boolean(details.connection)); next();
     } catch (error) {
       setAnalysisError(error instanceof Error && error.name !== "TimeoutError" ? error.message : "This is taking too long. Your recording is still here. Try again or continue without AI.");
@@ -230,7 +232,7 @@ export function DemoFlow() {
                   disabled={busy}
                   onBusyChange={setVoiceBusy}
                   onChange={(audio, sample) => {
-                    setMemory((m) => ({ ...m, audio, sample, transcript: "", analyzed: false, person: "", place: "", song: "", artist: "", context: "", connection: "", destination: "", connector: "", travelStatus: "unknown", clarificationSkipped: false }));
+                    setMemory((m) => ({ ...m, audio, sample, originalTranscript: "", transcript: "", analyzed: false, person: "", place: "", song: "", artist: "", context: "", connection: "", destination: "", connector: "", travelStatus: "unknown", clarificationSkipped: false }));
                     setYes(false); setAnalysisError("");
                   }}
                 />
@@ -255,7 +257,7 @@ export function DemoFlow() {
               <p className="demo-lede">
                 {memory.analyzed ? "Suggested from your voice. Check names and dates, change anything, and leave the rest blank." : memory.sample ? "Prepared example details — this example does not call AI." : "A name, a place, a song. Keep only what matters to you."}
               </p>
-              {memory.transcript && <div className="demo-quote"><p className="demo-mini">{memory.sample ? "SAMPLE TRANSCRIPT" : "YOUR WORDS · TRANSCRIPT"}</p><p>“{memory.transcript}”</p></div>}
+              <TranscriptEditor memory={memory} onChange={value => update("transcript", value)} />
               <div className="demo-fields">
                 <label>
                   Memory date <span>{memory.analyzed ? "check this date" : "defaults to today"}</span>
@@ -421,7 +423,7 @@ export function DemoFlow() {
                   SEE THE CONNECTION <span aria-hidden="true">→</span>
                 </button>
                 <button className="demo-text" onClick={() => setStep(1)}>
-                  Edit this memory
+                  {/[ぁ-んァ-ヶ一-龯]/.test(memory.transcript) ? "この思い出を編集" : "Edit this memory"}
                 </button>
               </div>
             </>
@@ -476,6 +478,7 @@ export function DemoFlow() {
                 <Link className="button" href="/#founding">
                   BECOME A FOUNDING TRAVELER <span aria-hidden="true">↗</span>
                 </Link>
+                <button className="demo-text" onClick={() => setStep(1)}>{/[ぁ-んァ-ヶ一-龯]/.test(memory.transcript) ? "この思い出を編集" : "Edit this memory"}</button>
                 <button className="demo-text" onClick={reset}>
                   Try another moment
                 </button>

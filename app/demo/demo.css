@@ -486,3 +486,11 @@
 .demo-travel-status { display: inline-block; padding: 6px 10px; border: 1px solid #b77b65; font-size: 13px; }
 .demo-destination.open .demo-travel-status { border-style: dashed; }
 .demo-destination.visited .demo-travel-status { background: #eee4d8; }
+
+.demo-transcript-editor { border-top: 1px solid #d9d3c9; border-bottom: 1px solid #d9d3c9; margin: 28px 0; padding: 24px 0; }
+.demo-transcript-editor label { display: block; font-size: 14px; }
+.demo-transcript-editor textarea { display: block; width: 100%; margin: 10px 0; padding: 16px; border: 1px solid #c9c1b7; background: #fffdf8; color: inherit; font: inherit; font-size: 16px; line-height: 1.7; resize: vertical; min-height: 150px; }
+.demo-transcript-editor audio { display: block; width: 100%; margin: 16px 0; }
+.demo-original { margin: 16px 0; font-size: 14px; overflow-wrap: anywhere; }
+.demo-original summary { cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.demo-original p { white-space: pre-wrap; line-height: 1.7; }

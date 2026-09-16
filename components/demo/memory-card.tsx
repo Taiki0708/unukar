@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { statusLabel, type JourneyMemory } from "./journey-connection";
-import { SAMPLE_TRANSCRIPT } from "./voice-capture";
 export type Memory = JourneyMemory & {
+  originalTranscript: string;
   transcript: string;
   analyzed: boolean;
   photo: string;
@@ -41,7 +41,7 @@ export function MemoryCard({ memory }: { memory: Memory }) {
         {memory.sample ? (
           <>
             <p className="demo-mini">EXAMPLE VOICE NOTE · SAMPLE TRANSCRIPT</p>
-            <blockquote>“{SAMPLE_TRANSCRIPT}”</blockquote>
+            <blockquote>“{memory.transcript}”</blockquote>
           </>
         ) : url ? (
           <>
@@ -54,7 +54,8 @@ export function MemoryCard({ memory }: { memory: Memory }) {
         ) : (
           <p className="demo-hint">A quiet moment. No voice note added.</p>
         )}
-        {memory.transcript && !memory.sample && <><p className="demo-mini">YOUR WORDS · TRANSCRIPT</p><blockquote>“{memory.transcript}”</blockquote></>}
+        {memory.transcript && !memory.sample && <><p className="demo-mini">{memory.transcript !== memory.originalTranscript ? "YOUR WORDS · EDITED" : "YOUR WORDS · TRANSCRIPT"}</p><blockquote>“{memory.transcript}”</blockquote></>}
+        {memory.originalTranscript && memory.transcript !== memory.originalTranscript && <details className="demo-original"><summary>{/[ぁ-んァ-ヶ一-龯]/.test(memory.originalTranscript) ? "元の文字起こしを見る" : "View original transcript"}</summary><p>{memory.originalTranscript}</p></details>}
         <dl>
           {memory.person && (
             <>
